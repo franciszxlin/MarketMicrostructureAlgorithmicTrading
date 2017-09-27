@@ -23,4 +23,9 @@ execute(h1, 'select dailyMargin:(15876-15875)*notional from instinfo where inst 
 # Problem 2
 execute(h1, '(update inst:sym2inst[sym] from 5 # `volume xdesc select volume:sum siz by sym from trade where date=2017.08.18) lj select name by inst from instinfo')
 # The 5 most actively traded interest rates products on August 18, 2017 are 10 Yr Note, 5 Yr Note, U.S. Treasury Bond, 2 Yr Note, Eurodollar contracts
-execute()
+execute(h2, '(update inst:sym2inst[sym] from 5 # `volume xdesc select volume:sum siz by sym from trade where date=2017.08.18) lj select name by inst from instinfo')
+# The 5 most actively traded non-interest rate products on the same date are E-mini S&P 500, Crude Oil, E-mini NASDAQ 100, Gold, Japanese Yen contracts
+
+# Problem 3
+znu7_daily_volume=execute(h1, 'select Volume:sum siz by date from trade where sym=`ZNU7')
+plot(znu7_daily_volume$date, znu7_daily_volume$Volume/10^6, xlab='Figure 1:Traded volume for ZNU7 in August 2017',ylab="Trade Volume (millions of lots)",type='o')
