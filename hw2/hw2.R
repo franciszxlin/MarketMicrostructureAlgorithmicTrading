@@ -128,5 +128,68 @@ enp_e6
 # Non-IR products: The CL(crude oil) has 2.78 effective entropy number: more than 20 maturities are active at one time
 
 # Problem 3
+# Date range
+date_range<-numeric(33)
+date_range[1]<-"2017.07.31"
+date_range[33]<-"2017.09.01"
+for (i in 1:31)
+{
+  if (i<=9)
+  {
+    date_range[i+1]<-paste("2017.08.0",i,sep="")
+  } 
+  if (i>9)
+  {
+    date_range[i+1]<-paste("2017.08.",i,sep="")
+  }
+}
+ir_range<-execute(h1,"`inst xasc select distinct inst from (update inst:sym2inst[sym] from select from trade where date=2017.08.01) where not null inst")
+nir_range<-execute(h2,"`inst xasc select distinct inst from (update inst:sym2inst[sym] from select from trade where date=2017.08.01) where not null inst")
+length(ir_range$inst)
+length(nir_range$inst)
+ir_mat<-matrix(0,nrow=22,ncol=33)
+nir_mat<-matrix(0,nrow=66,ncol=33)
+
+for (i in 1:33) 
+{
+  d<-date_range[i]
+  for (j in 1:11)
+  {
+    inst<-ir_range$inst[j]
+    s<-execute(h1,paste("{[d;inst] select last sym from `v xasc select v:sum siz by sym from select from trade where date=d, sym2inst[sym]=inst}[", d, "; `", inst,"]",sep=""))
+    sym<-s$sym
+    r<-execute(h1, paste("{[d;s] select r:(avg (bsiz+asiz))%(avg siz) from aj[`seq; select from trade where date=d, sym=s; select from quote where date=d, sym=s]}[", d, "; `", sym, "]", sep=""))
+    e<-execute(h1, paste("{[d;s] select eta:(ch-dch)%dch from select sum dch, sum ch from update dch:differ sign from update sign:signum del from update del:deltas prc from select from (update ch:differ prc from select from trade where date=d, sym=s) where ch=1}[", d, ";`", sym, "]", sep=""))
+    ir_mat[2*j-1,i]<-r$r
+    ir_mat[2*j,i]<-e$eta
+  }
+  for (k in 1:33)
+  {
+    inst<-nir_range$inst[k]
+    s<-execute(h2,paste("{[d;inst] select last sym from `v xasc select v:sum siz by sym from select from trade where date=d, sym2inst[sym]=inst}[", d, "; `", inst,"]",sep=""))
+    sym<-s$sym
+    r<-execute(h2, paste("{[d;s] select r:(avg (bsiz+asiz))%(avg siz) from aj[`seq; select from trade where date=d, sym=s; select from quote where date=d, sym=s]}[", d, "; `", sym, "]", sep=""))
+    e<-execute(h2, paste("{[d;s] select eta:(ch-dch)%dch from select sum dch, sum ch from update dch:differ sign from update sign:signum del from update del:deltas prc from select from (update ch:differ prc from select from trade where date=d, sym=s) where ch=1}[", d, ";`", sym, "]", sep=""))
+    nir_mat[2*k-1,i]<-r$r
+    nir_mat[2*k,i]<-e$eta
+  }
+}
+
+ir_rm<-rowMeans(ir_mat, na.rm=TRUE)
+nir_rm<-rowMeans(nir_mat, na.rm=TRUE)
+inst_name<-c(ir_range$inst,nir_range$inst)
+irnir_stat<-c(ir_rm, nir_rm)
+
+x<-numeric(length(inst_name))
+y<-numeric(length(inst_name))
+for (i in 1:length(inst_name))
+{
+  x[i]<-irnir_stat[2*i-1]
+  y[i]<-irnir_stat[2*i]
+}
 
 
+plot(x,y, main="2017.07-31 to 2017.09-01", xlab="Average quote size / average aggressive trade size", ylab="Reversion parameter", axes=FALSE)
+text(x,y,inst_name)
+axis(1, at=c(2,5,10,20,50,100,200,500,1000,2000))
+axis(2, at=c(0.1,0.2,0.5,1))
